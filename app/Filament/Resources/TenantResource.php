@@ -6,11 +6,13 @@ use App\Filament\Resources\TenantResource\Pages;
 use App\Filament\Resources\TenantResource\RelationManagers;
 use App\Models\Tenant;
 use Filament\Forms;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,6 +42,8 @@ class TenantResource extends Resource
                     ->label('Kota/Kabupaten')
                     ->relationship('city', 'name')
                     ->required(),
+                FileUpload::make('background')
+                    ->label('Foto'),
             ]);
     }
 
@@ -50,12 +54,14 @@ class TenantResource extends Resource
                 TextColumn::make('name')->label('Nama'),
                 TextColumn::make('phone')->label('No. Telepon/WA'),
                 TextColumn::make('city.name')->label('Kota/Kabupaten'),
+                ImageColumn::make('background'),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
