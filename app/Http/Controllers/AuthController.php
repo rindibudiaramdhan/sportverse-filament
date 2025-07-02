@@ -7,6 +7,8 @@ use App\Models\Otp;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Http;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -34,6 +36,45 @@ class AuthController extends Controller
         return response()->json(['message' => 'OTP sent via WhatsApp']);
     }
 
+    public function loginWithGoogle(Request $request)
+    {
+        $request->validate([
+            'id_token' => 'required|string',
+        ]);
+
+        // Verifikasi ke Google
+        $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
+            'id_token' => $request->id_token,
+        ]);
+
+        if (!$response->ok()) {
+            return response()->json(['message' => 'Invalid Google ID token'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $googleUser = $response->json();
+
+        // Ambil email dan nama dari Google
+        $email = $googleUser['email'] ?? null;
+        $name = $googleUser['name'] ?? null;
+        $googleId = $googleUser['sub'] ?? null;
+
+        if (!$email || !$googleId) {
+            return response()->json(['message' => 'Google data incomplete'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // Cek user atau buat baru
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'google_id' => $googleId,
+                'role_id' => \App\Models\Role::where('name', 'user')->value('id'),
+            ]
+        );
+
+        return response()->json($this->generateAccessToken($user));
+    }
+
     public function verifyOtp(Request $request)
     {
         $request->validate([
@@ -53,13 +94,18 @@ class AuthController extends Controller
 
         $user = User::where('phone_number', $request->phone_number)->first();
 
+        return response()->json($this->generateAccessToken($user));
+    }
+
+    private function generateAccessToken(User $user): string
+    {
         $token = JWTAuth::fromUser($user);
 
-        return response()->json([
+        return [
             'access_token' => $token,
             'token_type' => 'Bearer',
             'expires_in' => auth('api')->factory()->getTTL() * 60,
-        ]);
+        ;
     }
 
     public function logout()

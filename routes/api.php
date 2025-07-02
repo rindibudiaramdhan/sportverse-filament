@@ -8,6 +8,8 @@ Route::get('/ping', function () {
 });
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login/google', [AuthController::class, 'loginWithGoogle']);
+
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 
 Route::middleware('auth:api')->group(function () {
